@@ -99,7 +99,95 @@
 
    
 
-3. 
+3. **排序**
+`guava` 提供了`ordering`排序器，从实现上看，`ordering`实例就是一个特殊的`comparator`实例，它将很多基于`Comparator`的静态方法包装成自己的实例方法，并且提供了链式调用方法来钉子和增强现有的比较器。
+
+**创建排序器**：常见的排序器可以由下面的静态方法创建
+
+| **方法**           | **描述**                                               |
+| ------------------ | ------------------------------------------------------ |
+| `natural()`        | 对可排序类型做自然排序，如数字按大小，日期按先后排序   |
+| `usingToString()`  | 按对象的字符串形式做字典排序[lexicographical ordering] |
+| `from(Comparator)` | 把给定的 Comparator 转化为排序器                       |
+
+```java
+Ordering<String> ordering = new Ordering<String>() {
+	@Override
+    public int compare(@Nullable String left, @Nullable String right) {
+    	return Ints.compare(left.length(), right.length());
+    }
+};
+//1. 使用from
+ User user1 = new User("leon", 15);
+ User user2 = new User("chenliang", 18);
+ List<User> users = new ArrayList<User>();
+ users.add(user1);
+ users.add(user2);
+ //构造排序器
+ Ordering<User> ordering = Ordering.from((left, right) ->          Ints.compare(left.age, right.age));
+ //获取排序结果
+ List<User> usersSorted = ordering.immutableSortedCopy(users);
+//2. 使用natural
+int[] arr = {7, 3, 5, 2, 8};
+Ordering<Integer> ordering = Ordering.natural();
+List<Integer> list = ordering.immutableSortedCopy( Arrays.stream(arr).boxed().collect(Collectors.toList()));
+//3. 使用usingToString
+List<String> list = Lists.newArrayList("leon", "chenliang");
+Ordering ording = Ordering.usingToString();
+List<String> listSorted = ording.sortedCopy(list);
+```
+
+**链式调用方法**：通过链式调用，可以由给定的排序器衍生出其它排序器
+
+| **方法**               | **描述**                                                     |
+| ---------------------- | ------------------------------------------------------------ |
+| `reverse()`            | 获取语义相反的排序器                                         |
+| `nullsFirst()`         | 使用当前排序器，但额外把 null 值排到最前面。                 |
+| `nullsLast()`          | 使用当前排序器，但额外把 null 值排到最后面。                 |
+| `compound(Comparator)` | 合成另一个比较器，以处理当前排序器中的相等情况。             |
+| `lexicographical()`    | 基于处理类型 T 的排序器，返回该类型的可迭代对象 Iterable<T>的排序器。 |
+| `onResultOf(Function)` | 对集合中元素调用 Function，再按返回值用当前排序器排序。      |
+
+```java
+Ordering<User> ordering = Ordering.natural().nullsFirst().onResultOf(user -> {
+	return user.age;
+});
+```
+
+**运用排序器**：Guava 的排序器实现有若干操纵集合或元素值的方法
+
+| **方法**                               | **描述**                                                     | **另请参见**                                      |
+| -------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------- |
+| `greatestOf(Iterable iterable, int k)` | 获取可迭代对象中最大的k个元素。                              | `leastOf`                                         |
+| `isOrdered(Iterable)`                  | 判断可迭代对象是否已按排序器排序：允许有排序值相等的元素。   | `isStrictlyOrdered`                               |
+| `sortedCopy(Iterable)`                 | 判断可迭代对象是否已严格按排序器排序：不允许排序值相等的元素。 | `immutableSortedCopy`                             |
+| `min(E, E)`                            | 返回两个参数中最小的那个。如果相等，则返回第一个参数。       | `max(E, E)`                                       |
+| `min(E, E, E, E...)`                   | 返回多个参数中最小的那个。如果有超过一个参数都最小，则返回第一个最小的参数。 | `max(E, E, E, E...)`                              |
+| `min(Iterable)`                        | 返回迭代器中最小的元素。如果可迭代对象中没有元素，则抛出 NoSuchElementException。 | `max(Iterable)`, `min(Iterator)`, `max(Iterator)` |
+
+```java
+ List<UserInfo> orderStepInfo = Ordering
+               .<UserInfo>from((left, right) -> Longs.compare(right.getTimestamp(),                     left.getTimestamp()))
+                .immutableSortedCopy(Lists.transform(userInfos, it -> {
+                    Order order = new Order();
+                    order.setUserName(it.getUserName());
+                    order.setTimestamp(it.getTimestamp());
+                    return order;
+                }));
+```
+
+**java8使用stream排序**
+
+```java
+//1. 按自然序拍序
+List<User> users = userList.stream().sorted().collect(Collectors.toList());
+//2. 按某一字段信息排序
+List<User> users = userList.stream().sorted(Comparator.comparing(User::getAge)).collect(Collectors.toList());
+//3. 按某一字段倒序
+List<User> users = userList.stream().sorted(Comparator.comparing(User::getAge).reversed()).collect(Collectors.toList());
+```
+
+以上涉及的测试用例在：`com.leon.guava.demo.basicutil.Sorts`
 
 ##### 集合
 
